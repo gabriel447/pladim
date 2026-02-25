@@ -41,10 +41,12 @@ import { useRouter } from 'vue-router'
 import { usePladimStore } from '@/stores/pladim'
 import { googleTokenLogin, googleAuthCodeLogin } from 'vue3-google-login'
 import { ref } from 'vue'
+import { useToast } from '@/components/ui/ToastContainer.vue'
 
 const router = useRouter()
 const store = usePladimStore()
 const isLoading = ref(false)
+const { add: addToast } = useToast()
 
 const login = () => {
   isLoading.value = true
@@ -73,7 +75,11 @@ const tryAuthCodeFlow = () => {
   }).catch((error) => {
     console.error('Erro no login (Code Flow):', error)
     isLoading.value = false
-    alert('Não foi possível autenticar com o Google.')
+    addToast({
+      title: 'Erro de Autenticação',
+      message: 'Não foi possível autenticar com o Google.',
+      type: 'error'
+    })
   })
 }
 

@@ -204,13 +204,11 @@ export const usePladimStore = defineStore('pladim', {
     },
 
     resetData() {
-      if (confirm('Apagar tudo e começar do zero?')) {
-        this.tasks = []
-        this.rewards = []
-        this.balancePrevious = 0
-        this.spentPoints = 0
-        this.save()
-      }
+      this.tasks = []
+      this.rewards = []
+      this.balancePrevious = 0
+      this.spentPoints = 0
+      this.save()
     },
 
     seedInitialData() {
