@@ -17,7 +17,7 @@
             <input 
               v-model="newName" 
               type="text" 
-              placeholder="Ex: Pizza no fim de semana"
+              placeholder="Ex: Pizza"
               class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all placeholder:text-gray-400"
               @keyup.enter="addReward"
             >

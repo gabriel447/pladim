@@ -2,13 +2,14 @@
   <header class="bg-white py-4 px-6 mb-8 flex items-center justify-between rounded-xl shadow-sm border border-gray-100">
     <div class="flex items-center gap-3">
       <img 
-        v-if="user?.avatar" 
+        v-if="user?.avatar && !imageError" 
         :src="user.avatar" 
         alt="Avatar" 
-        class="w-10 h-10 rounded-full border-2 border-white shadow-sm"
+        class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
+        @error="imageError = true"
       />
-      <div v-else class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold">
-        {{ user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U' }}
+      <div v-else class="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-gray-400">
+        <UserIcon class="w-6 h-6" />
       </div>
       
       <div class="flex flex-col">
@@ -27,13 +28,21 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+import { User as UserIcon } from 'lucide-vue-next'
 import type { GoogleUser } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   user: GoogleUser | null
 }>()
 
 defineEmits<{
   (e: 'logout'): void
 }>()
+
+const imageError = ref(false)
+
+watch(() => props.user?.avatar, () => {
+  imageError.value = false
+})
 </script>
