@@ -40,7 +40,7 @@
           <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
           {{ formattedSelectedDate }}
         </h3>
-        <span class="text-xs font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-100 shadow-sm">
+        <span class="text-xs font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-100 shadow-sm whitespace-nowrap">
           {{ tasksForSelectedDate.length }} tarefas
         </span>
       </div>
@@ -129,7 +129,7 @@ const formattedMonth = computed(() => {
 })
 
 const formattedSelectedDate = computed(() => {
-  return format(selectedDate.value, "EEEE, d 'de' MMMM", { locale: ptBR })
+  return format(selectedDate.value, "EEEE, dd/MM", { locale: ptBR })
 })
 
 const calendarDays = computed(() => {

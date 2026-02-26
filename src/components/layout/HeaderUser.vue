@@ -6,6 +6,7 @@
         :src="user.avatar" 
         alt="Avatar" 
         class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
+        referrerpolicy="no-referrer"
         @error="imageError = true"
       />
       <div v-else class="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-gray-400">

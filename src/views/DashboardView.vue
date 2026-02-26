@@ -12,19 +12,20 @@
             <span class="text-4xl font-black text-teal-600 mt-1">{{ store.totalBalance }}</span>
         </div>
       </div>
-      <div class="flex rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200 p-1 gap-1 mb-6">
+      <div class="flex rounded-xl overflow-hidden bg-white shadow-sm border border-gray-200 mb-6">
         <button 
           v-for="tab in tabs" 
           :key="tab.id"
           @click="activeTab = tab.id"
-          class="flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-sm rounded-lg transition-all cursor-pointer"
-          :class="activeTab === tab.id ? 'bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-200' : 'text-gray-500 hover:bg-gray-50'"
+          class="flex-1 py-3 px-2 flex items-center justify-center transition-all cursor-pointer relative"
+          :class="activeTab === tab.id ? 'bg-teal-50 text-teal-700' : 'text-gray-500 hover:bg-gray-50'"
+          :title="tab.label"
         >
-          <component :is="tab.icon" class="w-4 h-4" />
-          {{ tab.label }}
+          <component :is="tab.icon" class="w-6 h-6" />
+          <div v-if="activeTab === tab.id" class="absolute bottom-0 left-0 w-full h-1 bg-teal-500"></div>
         </button>
       </div>
-      <div class="bg-white rounded-xl shadow-sm p-1 min-h-[400px]">
+      <div class="mt-4 min-h-[400px]">
         <Transition
           enter-active-class="transition duration-200 ease-out"
           enter-from-class="opacity-0 translate-y-2"
@@ -34,20 +35,20 @@
           leave-to-class="opacity-0 translate-y-2"
           mode="out-in"
         >
-          <div v-if="activeTab === 'agenda'" key="agenda" class="p-4">
+          <div v-if="activeTab === 'agenda'" key="agenda">
             <AgendaTab 
               :tasks="store.tasks"
               @toggle-date="handleToggleDate"
             />
           </div>
-          <div v-else-if="activeTab === 'tasks'" key="tasks" class="p-4">
+          <div v-else-if="activeTab === 'tasks'" key="tasks">
             <TaskTab 
               :tasks="store.tasks"
               @add="handleAddTask"
               @remove="store.removeTask"
             />
           </div>
-          <div v-else key="rewards" class="p-4">
+          <div v-else key="rewards">
             <RewardTab 
               :rewards="store.rewards"
               :purchases="store.purchases"

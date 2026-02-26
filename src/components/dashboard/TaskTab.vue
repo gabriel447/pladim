@@ -35,15 +35,15 @@
           </div>
         </div>
         
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
-          <div class="space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2">
+          <div class="space-y-3 w-full md:w-auto">
             <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Frequência</label>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex justify-between md:justify-start gap-1 sm:gap-2">
               <button
                 v-for="(day, index) in weekDays"
                 :key="index"
                 @click="toggleDaySelection(index)"
-                class="h-9 w-9 rounded-full text-xs font-bold transition-all border cursor-pointer flex items-center justify-center"
+                class="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-[10px] sm:text-xs font-bold transition-all border cursor-pointer flex items-center justify-center"
                 :class="newScheduledDays.includes(index) 
                   ? 'bg-teal-600 text-white border-teal-600 shadow-sm ring-2 ring-teal-100 scale-105' 
                   : 'bg-white text-gray-400 border-gray-200 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-600'"
