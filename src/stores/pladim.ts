@@ -1,8 +1,5 @@
-/**
- * Gerencia o estado global da aplicação (Tarefas, Recompensas, Pontuação, Usuário) usando Pinia.
- */
 import { defineStore } from 'pinia'
-import type { Task, Reward, UserState, GoogleUser } from '@/types'
+import type { Task, Reward, UserState, GoogleUser, Purchase } from '@/types'
 import { loadStorage, saveStorage } from '@/services/storage'
 import { useToast } from '@/components/ui/ToastContainer.vue'
 
@@ -15,27 +12,29 @@ export const usePladimStore = defineStore('pladim', {
     userEmail: null as string | null,
     tasks: [] as Task[],
     rewards: [] as Reward[],
-    balancePrevious: 0,
-    spentPoints: 0,
+    purchases: [] as Purchase[],
+    legacyBalance: 0,
   }),
 
   getters: {
-    pointsThisWeek: (state): number => 
+    pointsFromTasks: (state): number => 
       state.tasks.reduce((total, task) => {
-        const days = task.completedDays.filter(Boolean).length
-        return total + (days * task.points)
+        return total + (task.completedDates.length * task.points)
       }, 0),
 
+    spentPoints: (state): number =>
+      state.purchases.reduce((total, purchase) => total + purchase.cost, 0),
+
     totalBalance(state): number {
-      return (this.balancePrevious + this.pointsThisWeek) - state.spentPoints
+      return (state.legacyBalance + this.pointsFromTasks) - this.spentPoints
     },
     
     userState(state): UserState {
       return {
         tasks: state.tasks,
         rewards: state.rewards,
-        balancePrevious: state.balancePrevious,
-        spentPoints: state.spentPoints
+        purchases: state.purchases,
+        legacyBalance: state.legacyBalance
       }
     }
   },
@@ -75,16 +74,95 @@ export const usePladimStore = defineStore('pladim', {
       if (!email) return
       this.userEmail = email
       
-      const loaded = loadStorage(email)
+      const loaded: any = loadStorage(email)
       
       if (loaded) {
-        this.tasks = loaded.tasks || []
-        this.rewards = loaded.rewards || []
-        this.balancePrevious = loaded.balancePrevious || 0
-        this.spentPoints = loaded.spentPoints || 0
+        if (Array.isArray(loaded.tasks) && loaded.tasks.length > 0 && 'completedDays' in loaded.tasks[0]) {
+            this.migrateOldData(loaded)
+        } else {
+            this.tasks = loaded.tasks || []
+            this.rewards = loaded.rewards || []
+            this.purchases = loaded.purchases || []
+            this.legacyBalance = loaded.legacyBalance || 0
+            
+          this.consolidatePoints()
+          
+          if (this.totalBalance < 0) {
+              this.legacyBalance = 0
+              this.tasks.forEach(t => t.completedDates = []) 
+              const earned = this.pointsFromTasks
+              const spent = this.spentPoints
+              if (spent > earned + this.legacyBalance) {
+                  this.legacyBalance = spent - earned
+              }
+          }
+        }
       } else {
         this.seedInitialData()
       }
+    },
+
+    consolidatePoints() {
+        import('date-fns').then(({ startOfWeek, isBefore, parseISO, format }) => {
+            const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 })
+            let pointsToMigrate = 0
+            let changed = false
+
+            this.tasks.forEach(task => {
+                const remainingDates: string[] = []
+                task.completedDates.forEach(dateStr => {
+                    const date = parseISO(dateStr)
+                    if (isBefore(date, currentWeekStart)) {
+                        pointsToMigrate += task.points
+                        changed = true
+                    } else {
+                        remainingDates.push(dateStr)
+                    }
+                })
+                task.completedDates = remainingDates
+            })
+
+            if (changed) {
+                this.legacyBalance += pointsToMigrate
+                this.save()
+            }
+        })
+    },
+
+    migrateOldData(oldData: any) {
+        let oldPoints = oldData.balancePrevious || 0
+        
+        if (oldData.tasks) {
+            oldData.tasks.forEach((t: any) => {
+                if (t.completedDays) {
+                    const days = t.completedDays.filter(Boolean).length
+                    oldPoints += (days * t.points)
+                }
+            })
+        }
+        
+        const oldSpent = oldData.spentPoints || 0
+        const finalBalance = oldPoints - oldSpent
+        
+        this.legacyBalance = finalBalance > 0 ? finalBalance : 0
+        this.purchases = [] 
+        this.rewards = oldData.rewards.map((r: any) => ({
+            id: r.id,
+            title: r.title,
+            points: r.points,
+            createdAt: r.createdAt
+        }))
+        this.tasks = oldData.tasks.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            points: t.points,
+            scheduledDays: [0, 1, 2, 3, 4, 5, 6], 
+            completedDates: [], 
+            createdAt: t.createdAt
+        }))
+        
+        this.save()
+        useToast().add({ title: 'Atualizado', message: 'Sistema atualizado! Seus pontos foram preservados.', type: 'info' })
     },
 
     save() {
@@ -93,12 +171,13 @@ export const usePladimStore = defineStore('pladim', {
       }
     },
 
-    addTask(title: string, points: number) {
+    addTask(title: string, points: number, scheduledDays: number[]) {
       this.tasks.push({
         id: crypto.randomUUID(),
         title,
         points,
-        completedDays: Array(7).fill(false),
+        scheduledDays,
+        completedDates: [],
         createdAt: Date.now()
       })
       this.save()
@@ -119,12 +198,17 @@ export const usePladimStore = defineStore('pladim', {
       }
     },
 
-    toggleDay(taskId: string, dayIndex: number) {
-      const task = this.tasks.find(t => t.id === taskId)
-      if (task) {
-        task.completedDays[dayIndex] = !task.completedDays[dayIndex]
-        this.save()
-      }
+    toggleTaskDate(taskId: string, dateString: string) {
+        const task = this.tasks.find(t => t.id === taskId)
+        if (task) {
+            const index = task.completedDates.indexOf(dateString)
+            if (index > -1) {
+                task.completedDates.splice(index, 1)
+            } else {
+                task.completedDates.push(dateString)
+            }
+            this.save()
+        }
     },
 
     addReward(title: string, points: number) {
@@ -132,7 +216,6 @@ export const usePladimStore = defineStore('pladim', {
         id: crypto.randomUUID(),
         title,
         points,
-        redeemedCount: 0,
         createdAt: Date.now()
       })
       this.save()
@@ -141,7 +224,6 @@ export const usePladimStore = defineStore('pladim', {
 
     removeReward(id: string) {
       this.rewards = this.rewards.filter(r => r.id !== id)
-      this.updateSpent()
       this.save()
       useToast().add({ title: 'Sucesso', message: 'Recompensa removida!', type: 'success' })
     },
@@ -154,75 +236,63 @@ export const usePladimStore = defineStore('pladim', {
       }
     },
 
-    incrementReward(rewardId: string) {
-      const reward = this.rewards.find(r => r.id === rewardId)
-      if (!reward) return
-
-      if (this.totalBalance >= reward.points) {
-        reward.redeemedCount++
-        this.spentPoints += reward.points
-        this.save()
-        useToast().add({ 
-          title: 'Resgatado!', 
-          message: `Você pegou "${reward.title}"`, 
-          type: 'success' 
-        })
-      } else {
-        useToast().add({ 
-          title: 'Saldo insuficiente', 
-          message: 'Faltam pontos para essa recompensa.', 
-          type: 'error' 
-        })
-      }
-    },
-
-    decrementReward(rewardId: string) {
-      const reward = this.rewards.find(r => r.id === rewardId)
-      if (reward && reward.redeemedCount > 0) {
-        reward.redeemedCount--
-        this.spentPoints -= reward.points
-        this.save()
-      }
-    },
-    
-    updateSpent() {
-      this.spentPoints = this.rewards.reduce((total, r) => total + (r.points * r.redeemedCount), 0)
-    },
-
-    closeWeek() {
-      this.balancePrevious = this.totalBalance
-      this.tasks.forEach(t => t.completedDays = Array(7).fill(false))
-      this.rewards.forEach(r => r.redeemedCount = 0)
-      this.spentPoints = 0
-      this.save()
-      
-      useToast().add({ 
-        title: 'Semana fechada!', 
-        message: 'Saldo atualizado com sucesso.', 
-        type: 'success' 
-      })
+    purchaseReward(reward: Reward) {
+        if (this.totalBalance >= reward.points) {
+            this.purchases.push({
+                id: crypto.randomUUID(),
+                rewardId: reward.id,
+                rewardTitle: reward.title,
+                cost: reward.points,
+                purchasedAt: Date.now()
+            })
+            this.save()
+            useToast().add({ 
+                title: 'Resgatado!', 
+                message: `Você pegou "${reward.title}"`, 
+                type: 'success' 
+            })
+        } else {
+            useToast().add({ 
+                title: 'Saldo insuficiente', 
+                message: 'Faltam pontos para essa recompensa.', 
+                type: 'error' 
+            })
+        }
     },
 
     resetData() {
       this.tasks = []
       this.rewards = []
-      this.balancePrevious = 0
-      this.spentPoints = 0
+      this.purchases = []
+      this.legacyBalance = 0
       this.save()
     },
 
     seedInitialData() {
       this.tasks = [
-        { id: '1', title: 'Academia', points: 100, completedDays: Array(7).fill(false), createdAt: Date.now() },
-        { id: '2', title: 'Leitura', points: 200, completedDays: Array(7).fill(false), createdAt: Date.now() },
-        { id: '3', title: 'Estudar', points: 50, completedDays: Array(7).fill(false), createdAt: Date.now() },
+        { 
+            id: '1', 
+            title: 'Academia', 
+            points: 100, 
+            scheduledDays: [1, 3, 5], 
+            completedDates: [], 
+            createdAt: Date.now() 
+        },
+        { 
+            id: '2', 
+            title: 'Leitura', 
+            points: 50, 
+            scheduledDays: [0, 1, 2, 3, 4, 5, 6], 
+            completedDates: [], 
+            createdAt: Date.now() 
+        },
       ]
       this.rewards = [
-        { id: '1', title: 'Pizza', points: 2000, redeemedCount: 0, createdAt: Date.now() },
-        { id: '2', title: 'Cinema', points: 1000, redeemedCount: 0, createdAt: Date.now() },
+        { id: '1', title: 'Pizza', points: 2000, createdAt: Date.now() },
+        { id: '2', title: 'Cinema', points: 1000, createdAt: Date.now() },
       ]
-      this.balancePrevious = 0
-      this.spentPoints = 0
+      this.purchases = []
+      this.legacyBalance = 0
       this.save()
     }
   }

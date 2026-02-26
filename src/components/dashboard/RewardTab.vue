@@ -1,218 +1,156 @@
-<!--
-  Componente de lista de recompensas. Responsável por exibir, adicionar, remover, editar e resgatar recompensas.
--->
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="grid grid-cols-12 gap-4 bg-gray-100/80 px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider items-center">
-      <div class="col-span-6">Nome</div>
-      <div class="col-span-2 text-center">Pontos</div>
-      <div class="col-span-3 text-center">Qtd</div>
-      <div class="col-span-1"></div>
-    </div>
-
-    <div class="divide-y divide-gray-100">
-      <div v-for="reward in rewards" :key="reward.id" class="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50/50 transition-colors group">
-        <div class="col-span-6 font-medium text-gray-800 relative group/edit">
-          <div v-if="editId === reward.id" class="flex items-center">
+  <div class="space-y-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-6 bg-gray-50/50">
+        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Plus class="w-5 h-5 text-teal-600" />
+          Nova Recompensa
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">Defina prêmios para se motivar a cumprir suas tarefas.</p>
+      </div>
+      <div class="h-px bg-gray-100 mx-6"></div>
+      
+      <div class="p-6 space-y-6">
+        <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+          <div class="flex-1 space-y-3 w-full">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Nome</label>
             <input 
-              ref="nameInput"
-              v-model="editName"
-              type="text"
-              class="w-full px-2 py-1 rounded border border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
-              @blur="saveName(reward)"
-              @keyup.enter="saveName(reward)"
-              @keyup.esc="cancelEdit"
+              v-model="newName" 
+              type="text" 
+              placeholder="Ex: Pizza no fim de semana"
+              class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all placeholder:text-gray-400"
+              @keyup.enter="addReward"
             >
           </div>
-          <div 
-            v-else 
-            @click="startEdit(reward)"
-            class="cursor-pointer hover:text-teal-700 py-1 transition-colors"
-            title="Clique para editar"
-          >
-            <span class="truncate">{{ reward.title }}</span>
-          </div>
-        </div>
-        
-        <div class="col-span-2 text-center font-semibold text-gray-600 relative group/edit-points">
-          <div v-if="editPointsId === reward.id" class="flex items-center justify-center">
+          
+          <div class="w-full md:w-40 space-y-3">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Pontos</label>
             <input 
-              ref="pointsInput"
-              v-model.number="editPoints"
-              type="number"
-              class="w-16 px-1 py-1 text-center rounded border border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              @blur="savePoints(reward)"
-              @keyup.enter="savePoints(reward)"
-              @keyup.esc="cancelPoints"
+              v-model.number="newPoints" 
+              type="number" 
+              placeholder="100"
+              class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium text-gray-700"
+              @keyup.enter="addReward"
             >
           </div>
-          <div 
-            v-else 
-            @click="startEditPoints(reward)"
-            class="cursor-pointer hover:text-teal-700 py-1 transition-colors"
-            title="Clique para editar pontos"
+
+          <button 
+            @click="addReward" 
+            :disabled="!newName || newPoints <= 0"
+            class="h-12 w-full md:w-12 bg-teal-600 text-white rounded-xl hover:bg-teal-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer disabled:shadow-none disabled:hover:scale-100 shrink-0"
+            title="Adicionar Recompensa"
           >
-            {{ reward.points }}
+            <Plus class="w-6 h-6 stroke-3" />
+            <span class="md:hidden font-bold">Adicionar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="text-lg font-semibold text-gray-800">Recompensas Disponíveis</h3>
+        <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">{{ rewards.length }} cadastradas</span>
+      </div>
+
+      <div v-if="rewards.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          v-for="reward in rewards" 
+          :key="reward.id" 
+          class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group relative"
+        >
+          <div class="flex justify-between items-start mb-4 gap-3">
+            <h4 class="font-medium text-gray-800 text-lg wrap-break-word flex-1">{{ reward.title }}</h4>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="px-3 py-1 bg-teal-50 text-teal-700 font-bold rounded-full text-sm border border-teal-100 whitespace-nowrap">
+                {{ reward.points }} pts
+              </span>
+              <button 
+                @click="$emit('remove', reward.id)" 
+                class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                title="Excluir Recompensa"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <button 
+            @click="$emit('purchase', reward)"
+            class="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-2 mt-auto active:scale-[0.98]"
+          >
+            Resgatar
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
+          <Plus class="w-8 h-8 text-gray-300" />
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">Nenhuma recompensa ainda</h3>
+        <p class="mt-1 text-gray-500 max-w-sm mx-auto">Cadastre prêmios para você mesmo e troque seus pontos por eles!</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h3 class="font-semibold text-gray-700">Histórico de Resgates</h3>
+        <span class="text-xs text-gray-500">{{ purchases.length }} itens</span>
+      </div>
+
+      <div class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+        <div v-for="purchase in sortedPurchases" :key="purchase.id" class="px-6 py-3 flex justify-between items-center hover:bg-gray-50/50">
+          <div>
+            <div class="font-medium text-gray-800">{{ purchase.rewardTitle }}</div>
+            <div class="text-xs text-gray-400">{{ formatDate(purchase.purchasedAt) }}</div>
+          </div>
+          <div class="font-bold text-red-500 text-sm">
+            -{{ purchase.cost }} pts
           </div>
         </div>
-        
-        <div class="col-span-3 flex items-center justify-center gap-3">
-          <button 
-            @click="$emit('decrement', reward.id)"
-            class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            :disabled="reward.redeemedCount === 0"
-          >
-            <Minus class="w-4 h-4" />
-          </button>
-          
-          <span class="font-medium text-gray-700 w-6 text-center">{{ reward.redeemedCount }}</span>
-          
-          <button 
-            @click="$emit('increment', reward.id)"
-            class="w-8 h-8 rounded-full bg-teal-700 text-white hover:bg-teal-800 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <Plus class="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div class="col-span-1 flex justify-end">
-          <button 
-            @click="askRemove(reward.id)" 
-            class="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 cursor-pointer"
-            title="Excluir recompensa"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button>
+         <div v-if="purchases.length === 0" class="px-6 py-8 text-center text-gray-400 text-sm">
+          Nenhum resgate realizado ainda.
         </div>
       </div>
-
-      <div v-if="rewards.length === 0" class="px-6 py-8 text-center text-gray-400">
-        Nenhuma recompensa cadastrada.
-      </div>
     </div>
-
-    <div class="p-4 bg-gray-50/50 border-t border-gray-100 mt-auto">
-      <div class="flex gap-3">
-        <input 
-          v-model="newName" 
-          type="text" 
-          placeholder="Nome da nova recompensa"
-          class="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-          @keyup.enter="add"
-        >
-        <input 
-          v-model.number="newPoints" 
-          type="number" 
-          placeholder="Pontos"
-          class="w-24 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          @keyup.enter="add"
-        >
-        <button 
-          @click="add"
-          class="px-6 py-2 bg-teal-700 hover:bg-teal-800 text-white font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:bg-teal-800"
-          :disabled="!newName"
-        >
-          Adicionar
-        </button>
-      </div>
-    </div>
-
-    <ConfirmModal 
-      ref="confirmRef"
-      title="Excluir Recompensa"
-      message="Tem certeza que deseja excluir esta recompensa?"
-      confirm-text="Excluir"
-      cancel-text="Cancelar"
-      type="danger"
-      @confirm="remove"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import { Plus, Minus, Trash2 } from 'lucide-vue-next'
-import type { Reward } from '@/types'
-import type { PropType } from 'vue'
-import { usePladimStore } from '@/stores/pladim'
-import ConfirmModal from '@/components/ui/ConfirmModal.vue'
+import { ref, computed } from 'vue'
+import { Plus, Trash2 } from 'lucide-vue-next'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import type { Reward, Purchase } from '@/types'
 
-defineProps({
-  rewards: {
-    type: Array as PropType<Reward[]>,
-    required: true
-  }
-})
+const props = defineProps<{
+  rewards: Reward[]
+  purchases: Purchase[]
+}>()
 
-const emit = defineEmits(['add', 'remove', 'increment', 'decrement'])
-const store = usePladimStore()
+const emit = defineEmits<{
+  (e: 'add', payload: { title: string, points: number }): void
+  (e: 'remove', id: string): void
+  (e: 'purchase', reward: Reward): void
+}>()
 
 const newName = ref('')
-const newPoints = ref<number | ''>('')
-const confirmRef = ref<InstanceType<typeof ConfirmModal> | null>(null)
-const removeId = ref<string | null>(null)
+const newPoints = ref(100)
 
-const editId = ref<string | null>(null)
-const editName = ref('')
-const nameInput = ref<HTMLInputElement | null>(null)
-
-const startEdit = (reward: Reward) => {
-  editId.value = reward.id
-  editName.value = reward.title
-  nextTick(() => {
-    const el = Array.isArray(nameInput.value) ? nameInput.value[0] : nameInput.value
-    el?.focus()
-  })
-}
-
-const saveName = (reward: Reward) => {
-  if (editId.value === reward.id && editName.value.trim()) {
-    store.updateReward(reward.id, { title: editName.value })
-    editId.value = null
-  }
-}
-
-const cancelEdit = () => editId.value = null
-
-const editPointsId = ref<string | null>(null)
-const editPoints = ref<number | ''>('')
-const pointsInput = ref<HTMLInputElement | null>(null)
-
-const startEditPoints = (reward: Reward) => {
-  editPointsId.value = reward.id
-  editPoints.value = reward.points
-  nextTick(() => {
-    const el = Array.isArray(pointsInput.value) ? pointsInput.value[0] : pointsInput.value
-    el?.focus()
-  })
-}
-
-const savePoints = (reward: Reward) => {
-  if (editPointsId.value === reward.id && editPoints.value !== '') {
-    store.updateReward(reward.id, { points: Number(editPoints.value) })
-    editPointsId.value = null
-  }
-}
-
-const cancelPoints = () => editPointsId.value = null
-
-const add = () => {
-  if (newName.value && newPoints.value) {
-    emit('add', { title: newName.value, points: Number(newPoints.value) })
+const addReward = () => {
+  if (newName.value && newPoints.value > 0) {
+    emit('add', { title: newName.value, points: newPoints.value })
     newName.value = ''
-    newPoints.value = ''
+    newPoints.value = 100
   }
 }
 
-const askRemove = (id: string) => {
-  removeId.value = id
-  confirmRef.value?.open()
+const formatDate = (timestamp: number) => {
+  return format(timestamp, "d 'de' MMM 'às' HH:mm", { locale: ptBR })
 }
 
-const remove = () => {
-  if (removeId.value) {
-    emit('remove', removeId.value)
-    removeId.value = null
-  }
-}
+const sortedPurchases = computed(() => {
+  return [...props.purchases].sort((a, b) => b.purchasedAt - a.purchasedAt)
+})
 </script>

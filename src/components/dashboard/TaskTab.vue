@@ -1,219 +1,170 @@
-<!--
-  Componente de lista de tarefas. Responsável por exibir, adicionar, remover e editar tarefas, além de marcar dias concluídos.
--->
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="grid grid-cols-12 gap-4 bg-gray-100/80 px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider items-center">
-      <div class="col-span-3">Nome</div>
-      <div class="col-span-1 text-center">Seg</div>
-      <div class="col-span-1 text-center">Ter</div>
-      <div class="col-span-1 text-center">Qua</div>
-      <div class="col-span-1 text-center">Qui</div>
-      <div class="col-span-1 text-center">Sex</div>
-      <div class="col-span-1 text-center">Sáb</div>
-      <div class="col-span-1 text-center">Dom</div>
-      <div class="col-span-1 text-center">Pts</div>
-      <div class="col-span-1 text-center"></div>
-    </div>
-
-    <div class="divide-y divide-gray-100">
-      <div v-for="task in tasks" :key="task.id" class="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-gray-50/50 transition-colors group">
-        <div class="col-span-3 font-medium text-gray-800 relative group/edit">
-          <div v-if="editId === task.id" class="flex items-center">
+  <div class="space-y-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-6 bg-gray-50/50">
+        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Plus class="w-5 h-5 text-teal-600" />
+          Nova Tarefa
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">Crie hábitos e tarefas recorrentes para ganhar pontos.</p>
+      </div>
+      <div class="h-px bg-gray-100 mx-6"></div>
+      
+      <div class="p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-8 space-y-3">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Nome da Tarefa</label>
             <input 
-              ref="nameInput"
-              v-model="editName"
-              type="text"
-              class="w-full px-2 py-1 rounded border border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
-              @blur="saveName(task)"
-              @keyup.enter="saveName(task)"
-              @keyup.esc="cancelEdit"
+              v-model="newName" 
+              type="text" 
+              placeholder="Ex: Ler 10 páginas..."
+              class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all placeholder:text-gray-400"
             >
           </div>
-          <div 
-            v-else 
-            @click="startEdit(task)"
-            class="cursor-pointer hover:text-teal-700 py-1 transition-colors"
-            title="Clique para editar"
-          >
-            <span class="truncate">{{ task.title }}</span>
+          
+          <div class="md:col-span-4 space-y-3">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Pontos</label>
+            <div class="relative">
+              <input 
+                v-model.number="newPoints" 
+                type="number" 
+                placeholder="100"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium text-gray-700"
+              >
+            </div>
           </div>
         </div>
         
-        <div v-for="(day, index) in 7" :key="index" class="col-span-1 flex justify-center">
-          <button 
-            @click="$emit('toggle-day', task.id, index)"
-            class="w-6 h-6 rounded border transition-all flex items-center justify-center cursor-pointer"
-            :class="task.completedDays[index] 
-              ? 'bg-teal-600 border-teal-600 text-white' 
-              : 'bg-white border-gray-300 hover:border-teal-400'"
-          >
-            <Check v-if="task.completedDays[index]" class="w-4 h-4" stroke-width="3" />
-          </button>
-        </div>
-
-        <div class="col-span-1 text-center font-semibold text-gray-600 relative group/edit-points">
-          <div v-if="editPointsId === task.id" class="flex items-center justify-center">
-            <input 
-              ref="pointsInput"
-              v-model.number="editPoints"
-              type="number"
-              class="w-16 px-1 py-1 text-center rounded border border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              @blur="savePoints(task)"
-              @keyup.enter="savePoints(task)"
-              @keyup.esc="cancelPoints"
-            >
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
+          <div class="space-y-3">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-1">Frequência</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="(day, index) in weekDays"
+                :key="index"
+                @click="toggleDaySelection(index)"
+                class="h-9 w-9 rounded-full text-xs font-bold transition-all border cursor-pointer flex items-center justify-center"
+                :class="newScheduledDays.includes(index) 
+                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm ring-2 ring-teal-100 scale-105' 
+                  : 'bg-white text-gray-400 border-gray-200 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-600'"
+              >
+                {{ day.charAt(0) }}
+              </button>
+            </div>
           </div>
-          <div 
-            v-else 
-            @click="startEditPoints(task)"
-            class="cursor-pointer hover:text-teal-700 py-1 transition-colors"
-            title="Clique para editar pontos"
-          >
-            {{ task.points }}
-          </div>
-        </div>
 
-        <div class="col-span-1 flex justify-end">
           <button 
-            @click="askRemove(task.id)" 
-            class="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 cursor-pointer"
-            title="Excluir tarefa"
+            @click="addTask" 
+            :disabled="!newName || newPoints <= 0 || newScheduledDays.length === 0"
+            class="h-12 w-full md:w-12 bg-teal-600 text-white rounded-xl hover:bg-teal-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer disabled:shadow-none disabled:hover:scale-100 md:self-auto"
+            title="Adicionar Tarefa"
           >
-            <Trash2 class="w-4 h-4" />
+            <Plus class="w-6 h-6 stroke-3" />
+            <span class="md:hidden font-bold">Adicionar Tarefa</span>
           </button>
         </div>
       </div>
-
-      <div v-if="tasks.length === 0" class="px-6 py-8 text-center text-gray-400">
-        Nenhuma tarefa cadastrada.
-      </div>
     </div>
 
-    <div class="p-4 bg-gray-50/50 border-t border-gray-100 mt-auto">
-      <div class="flex gap-3">
-        <input 
-          v-model="newName" 
-          type="text" 
-          placeholder="Nome da nova tarefa"
-          class="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-          @keyup.enter="add"
+    <div class="space-y-4">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="text-lg font-semibold text-gray-800">Suas Tarefas</h3>
+        <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">{{ tasks.length }} cadastradas</span>
+      </div>
+
+      <div v-if="tasks.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          v-for="task in tasks" 
+          :key="task.id" 
+          class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group"
         >
-        <input 
-          v-model.number="newPoints" 
-          type="number" 
-          placeholder="Pontos"
-          class="w-24 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          @keyup.enter="add"
-        >
-        <button 
-          @click="add"
-          class="px-6 py-2 bg-teal-700 hover:bg-teal-800 text-white font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:bg-teal-800"
-          :disabled="!newName"
-        >
-          Adicionar
-        </button>
+          <div class="flex justify-between items-start mb-3 gap-3">
+            <h4 class="font-medium text-gray-800 text-lg wrap-break-word flex-1">{{ task.title }}</h4>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="px-3 py-1 bg-teal-50 text-teal-700 font-bold rounded-full text-sm border border-teal-100 whitespace-nowrap">
+                +{{ task.points }} pts
+              </span>
+              <button 
+                @click="$emit('remove', task.id)" 
+                class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                title="Excluir Tarefa"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            {{ formatScheduledDays(task.scheduledDays) }}
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
+          <Plus class="w-8 h-8 text-gray-300" />
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">Nenhuma tarefa ainda</h3>
+        <p class="mt-1 text-gray-500 max-w-sm mx-auto">Comece adicionando tarefas que você deseja realizar regularmente para acumular pontos.</p>
       </div>
     </div>
-
-    <ConfirmModal 
-      ref="confirmRef"
-      title="Excluir Tarefa"
-      message="Tem certeza que deseja excluir esta tarefa?"
-      confirm-text="Excluir"
-      cancel-text="Cancelar"
-      type="danger"
-      @confirm="remove"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import { Check, Trash2 } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import type { Task } from '@/types'
-import type { PropType } from 'vue'
-import { usePladimStore } from '@/stores/pladim'
-import ConfirmModal from '@/components/ui/ConfirmModal.vue'
 
-defineProps({
-  tasks: {
-    type: Array as PropType<Task[]>,
-    required: true
-  }
-})
+const props = defineProps<{
+  tasks: Task[]
+}>()
 
-const emit = defineEmits(['add', 'remove', 'toggle-day'])
-const store = usePladimStore()
+const emit = defineEmits<{
+  (e: 'add', payload: { title: string, points: number, scheduledDays: number[] }): void
+  (e: 'remove', id: string): void
+}>()
 
 const newName = ref('')
-const newPoints = ref<number | ''>('')
-const confirmRef = ref<InstanceType<typeof ConfirmModal> | null>(null)
-const removeId = ref<string | null>(null)
+const newPoints = ref(100)
+const newScheduledDays = ref<number[]>([1, 2, 3, 4, 5]) 
+const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-// Edição de Nome
-const editId = ref<string | null>(null)
-const editName = ref('')
-const nameInput = ref<HTMLInputElement | null>(null)
-
-const startEdit = (task: Task) => {
-  editId.value = task.id
-  editName.value = task.title
-  nextTick(() => {
-    const el = Array.isArray(nameInput.value) ? nameInput.value[0] : nameInput.value
-    el?.focus()
-  })
-}
-
-const saveName = (task: Task) => {
-  if (editId.value === task.id && editName.value.trim()) {
-    store.updateTask(task.id, { title: editName.value })
-    editId.value = null
+const toggleDaySelection = (dayIndex: number) => {
+  const index = newScheduledDays.value.indexOf(dayIndex)
+  if (index === -1) {
+    newScheduledDays.value.push(dayIndex)
+    newScheduledDays.value.sort((a, b) => a - b)
+  } else {
+    newScheduledDays.value.splice(index, 1)
   }
 }
 
-const cancelEdit = () => editId.value = null
-
-// Edição de Pontos
-const editPointsId = ref<string | null>(null)
-const editPoints = ref<number | ''>('')
-const pointsInput = ref<HTMLInputElement | null>(null)
-
-const startEditPoints = (task: Task) => {
-  editPointsId.value = task.id
-  editPoints.value = task.points
-  nextTick(() => {
-    const el = Array.isArray(pointsInput.value) ? pointsInput.value[0] : pointsInput.value
-    el?.focus()
-  })
-}
-
-const savePoints = (task: Task) => {
-  if (editPointsId.value === task.id && editPoints.value !== '') {
-    store.updateTask(task.id, { points: Number(editPoints.value) })
-    editPointsId.value = null
-  }
-}
-
-const cancelPoints = () => editPointsId.value = null
-
-const add = () => {
-  if (newName.value && newPoints.value) {
-    emit('add', { title: newName.value, points: Number(newPoints.value) })
+const addTask = () => {
+  if (newName.value && newPoints.value > 0 && newScheduledDays.value.length > 0) {
+    emit('add', { 
+      title: newName.value, 
+      points: newPoints.value,
+      scheduledDays: [...newScheduledDays.value]
+    })
+    
     newName.value = ''
-    newPoints.value = ''
+    newPoints.value = 100
   }
 }
 
-const askRemove = (id: string) => {
-  removeId.value = id
-  confirmRef.value?.open()
-}
-
-const remove = () => {
-  if (removeId.value) {
-    emit('remove', removeId.value)
-    removeId.value = null
-  }
+const formatScheduledDays = (days: number[] | undefined) => {
+  if (!days || days.length === 7) return 'Todos os dias'
+  if (days.length === 0) return 'Nenhum dia'
+  
+  const sortedDays = [...days].sort((a, b) => a - b)
+  
+  const isWeekDaysOnly = sortedDays.length === 5 && !sortedDays.includes(0) && !sortedDays.includes(6)
+  if (isWeekDaysOnly) return 'Dias úteis'
+  
+  const isWeekendOnly = sortedDays.length === 2 && sortedDays.includes(0) && sortedDays.includes(6)
+  if (isWeekendOnly) return 'Fim de semana'
+  
+  return sortedDays.map(d => weekDays[d]).join(', ')
 }
 </script>

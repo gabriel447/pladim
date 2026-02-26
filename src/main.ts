@@ -1,6 +1,3 @@
-/**
- * Ponto de entrada da aplicação. Inicializa o Vue, Pinia, Router e monta o app.
- */
 import './assets/main.css'
 
 import { createApp } from 'vue'

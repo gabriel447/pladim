@@ -1,7 +1,3 @@
-/**
- * Definições de tipos TypeScript globais (Interfaces) para Tarefas, Recompensas e Usuário.
- */
-
 export interface GoogleUser {
   email: string
   name: string
@@ -13,7 +9,8 @@ export interface Task {
   id: string
   title: string
   points: number
-  completedDays: boolean[] 
+  scheduledDays: number[]
+  completedDates: string[]
   createdAt: number
 }
 
@@ -21,19 +18,26 @@ export interface Reward {
   id: string
   title: string
   points: number
-  redeemedCount: number
   createdAt: number
+}
+
+export interface Purchase {
+  id: string
+  rewardId: string
+  rewardTitle: string
+  cost: number
+  purchasedAt: number
 }
 
 export interface UserState {
   tasks: Task[]
   rewards: Reward[]
-  balancePrevious: number
-  spentPoints: number
+  purchases: Purchase[]
+  legacyBalance: number
 }
 
 export interface PladimStoreState extends UserState {
   userEmail: string | null
 }
 
-export type TabType = 'tasks' | 'rewards'
+export type TabType = 'agenda' | 'tasks' | 'rewards'

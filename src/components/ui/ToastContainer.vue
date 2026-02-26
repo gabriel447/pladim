@@ -1,6 +1,3 @@
-<!--
-  Componente global de notificações (Toasts). Gerencia e exibe mensagens temporárias de sucesso ou erro.
--->
 <template>
   <div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
     <TransitionGroup name="toast">
@@ -16,7 +13,7 @@
           'bg-yellow-100 text-yellow-800': toast.type === 'warning'
         }"
       >
-        <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg"
+        <div class="inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg"
           :class="{
             'bg-green-200 text-green-700': toast.type === 'success',
             'bg-red-200 text-red-700': toast.type === 'error',

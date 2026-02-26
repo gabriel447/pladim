@@ -1,6 +1,3 @@
-<!--
-  Tela de Login/Inicial. Gerencia a autenticação do usuário via Google.
--->
 <template>
   <div class="flex items-center justify-center min-h-screen bg-gray-50">
     <div class="bg-white p-12 rounded-2xl shadow-lg max-w-md w-full text-center mx-4">
@@ -10,7 +7,7 @@
       </p>
       <div class="flex justify-center w-full">
         <button 
-          @click="login"
+          @click="handleLogin"
           :disabled="isLoading"
           class="flex items-center justify-center gap-3 w-full py-3 px-6 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors duration-200 ease-in-out group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -37,42 +34,46 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { usePladimStore } from '@/stores/pladim'
-import { googleTokenLogin, googleAuthCodeLogin } from 'vue3-google-login'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { googleTokenLogin, googleAuthCodeLogin } from 'vue3-google-login'
+import { usePladimStore } from '@/stores/pladim'
 import { useToast } from '@/components/ui/ToastContainer.vue'
 
 const router = useRouter()
 const store = usePladimStore()
-const isLoading = ref(false)
 const { add: addToast } = useToast()
 
-const login = () => {
+const isLoading = ref(false)
+
+const handleLogin = async () => {
   isLoading.value = true
   
-  googleTokenLogin().then((response: any) => {
+  try {
+    const response: any = await googleTokenLogin()
+    
     if (response.access_token) {
-      fetchUserInfo(response.access_token)
+      await fetchUserInfo(response.access_token)
     } else if (response.code) {
-      exchangeCodeForToken(response.code)
+      await exchangeCodeForToken(response.code)
     } else {
-      tryAuthCodeFlow()
+      await tryAuthCodeFlow()
     }
-  }).catch((error) => {
+  } catch (error) {
     console.error('Erro no login implícito:', error)
-    tryAuthCodeFlow()
-  })
+    await tryAuthCodeFlow()
+  }
 }
 
-const tryAuthCodeFlow = () => {
-  googleAuthCodeLogin().then((response) => {
+const tryAuthCodeFlow = async () => {
+  try {
+    const response = await googleAuthCodeLogin()
     if (response.code) {
-      exchangeCodeForToken(response.code)
+      await exchangeCodeForToken(response.code)
     } else {
       throw new Error('Não foi possível obter o código de autorização.')
     }
-  }).catch((error) => {
+  } catch (error) {
     console.error('Erro no login (Code Flow):', error)
     isLoading.value = false
     addToast({
@@ -80,7 +81,7 @@ const tryAuthCodeFlow = () => {
       message: 'Não foi possível autenticar com o Google.',
       type: 'error'
     })
-  })
+  }
 }
 
 const exchangeCodeForToken = async (code: string) => {
@@ -94,32 +95,28 @@ const exchangeCodeForToken = async (code: string) => {
 
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params
     })
 
     const data = await res.json()
 
     if (data.access_token) {
-      fetchUserInfo(data.access_token)
+      await fetchUserInfo(data.access_token)
     } else {
       throw new Error('Falha na troca do token.')
     }
   } catch (error) {
     console.error('Erro na troca do token:', error)
     isLoading.value = false
-    alert('Erro ao processar o login.')
+    addToast({ title: 'Erro', message: 'Erro ao processar o login.', type: 'error' })
   }
 }
 
 const fetchUserInfo = async (token: string) => {
   try {
     const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
     
     const user = await res.json()
@@ -138,7 +135,7 @@ const fetchUserInfo = async (token: string) => {
     router.push('/dashboard')
   } catch (error) {
     console.error('Erro ao buscar info do usuário:', error)
-    alert('Erro ao obter dados do perfil.')
+    addToast({ title: 'Erro', message: 'Erro ao obter dados do perfil.', type: 'error' })
     isLoading.value = false
   }
 }

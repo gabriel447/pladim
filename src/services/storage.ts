@@ -1,6 +1,3 @@
-/**
- * Serviço responsável por salvar e carregar os dados do usuário no LocalStorage do navegador.
- */
 import type { UserState } from '@/types'
 
 const PREFIX = 'pladim_data_'
